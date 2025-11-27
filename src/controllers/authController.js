@@ -1,6 +1,6 @@
 // ./controllers/authController.js
 const bcrypt = require("bcrypt");
-const { pool } = require("../db");
+const { pool } = require("../config/db");
 const crypto = require("crypto");
 
 // REGISTER
