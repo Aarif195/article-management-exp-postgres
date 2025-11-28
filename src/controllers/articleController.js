@@ -159,7 +159,6 @@ async function getArticles(req, res) {
     }
 }
 
-
 // GET article by ID
 async function getArticleById(req, res) {
     const id = parseInt(req.params.id);
@@ -179,7 +178,42 @@ async function getArticleById(req, res) {
     }
 }
 
+// DELETE ARTICLE
+async function deleteArticle(req, res) {
+    const user = req.user;
+
+    if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const id = parseInt(req.params.id);
+
+    try {
+        // Check if the article exists
+        const { rows } = await pool.query("SELECT * FROM articles WHERE id = $1", [id]);
+        const article = rows[0];
+
+        if (!article) {
+            return res.status(404).json({ message: "Article not found" });
+        }
+
+        // Verify author
+        if (article.author !== user.username) {
+            return res.status(403).json({ message: "Forbidden: You can only delete your own articles" });
+        }
+
+        // Delete the article
+        const deleted = await pool.query("DELETE FROM articles WHERE id = $1 RETURNING *", [id]);
+
+        res.status(204)
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal server error", details: err.message });
+    }
+}
+
+
 
 module.exports = { createArticle, getArticles, getArticleById
-
+,deleteArticle
 }
