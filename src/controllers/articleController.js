@@ -372,7 +372,7 @@ async function likeArticle(req, res) {
     }
 }
 
-// add comment (Express version)
+// add comment 
 async function postComment(req, res) {
     try {
         // authenticate
@@ -430,9 +430,51 @@ async function postComment(req, res) {
     }
 }
 
+// get comments
+ async function getComments(req, res) {
+    try {
+        const user = req.user;  
+        if (!user) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        const id = parseInt(req.params.id);
+
+        const { rows } = await pool.query(
+            "SELECT author, comments FROM articles WHERE id = $1",
+            [id]
+        );
+        const article = rows[0];
+
+        if (!article) {
+            return res.status(404).json({ message: "Article not found" });
+        }
+
+        if (article.author !== user.username) {
+            return res.status(403).json({
+                message: "Forbidden: Access to comments is restricted to the article's author."
+            });
+        }
+
+        const userComments = (article.comments || []).filter(
+            c => c.user === user.username
+        );
+
+        if (userComments.length === 0) {
+            return res.status(403).json({
+                message: "Forbidden: You have not made any comments on this article."
+            });
+        }
+
+        return res.status(200).json(userComments);
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+}
 
 
 module.exports = {
     createArticle, getArticles, getArticleById
-    , deleteArticle, updateArticle, likeArticle, postComment
+    , deleteArticle, updateArticle, likeArticle, postComment, getComments
 }
