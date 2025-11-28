@@ -372,10 +372,67 @@ async function likeArticle(req, res) {
     }
 }
 
+// add comment (Express version)
+async function postComment(req, res) {
+    try {
+        // authenticate
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        // get ID from express route params
+        const id = parseInt(req.params.id);
+
+        // get comment text from body
+        const { text } = req.body;
+
+        if (!text || text.trim() === "") {
+            return res.status(400).json({ message: "Comment text is required" });
+        }
+
+        // Get article from PostgreSQL
+        const { rows } = await pool.query("SELECT * FROM articles WHERE id = $1", [id]);
+        const article = rows[0];
+
+        if (!article) {
+            return res.status(404).json({ message: "Article not found" });
+        }
+
+        // PRIVATE: Only article author can comment
+        const articleAuthor = (article.author || "").trim().toLowerCase();
+        const tokenUser = (user.username || "").trim().toLowerCase();
+
+        if (articleAuthor !== tokenUser) {
+            return res.status(403).json({ message: "You can only comment on your own article" });
+        }
+
+        const newComment = {
+            id: Date.now(),
+            user: user.username,
+            text,
+            date: new Date().toISOString(),
+            replies: []
+        };
+
+        const updatedComments = article.comments ? [...article.comments, newComment] : [newComment];
+
+        await pool.query(
+            "UPDATE articles SET comments = $1 WHERE id = $2 RETURNING *",
+            [JSON.stringify(updatedComments), id]
+        );
+
+        return res.status(201).json(newComment);
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+}
 
 
 
 module.exports = {
     createArticle, getArticles, getArticleById
-    , deleteArticle, updateArticle, likeArticle
+    , deleteArticle, updateArticle, likeArticle, postComment
 }

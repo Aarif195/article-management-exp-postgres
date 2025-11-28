@@ -8,7 +8,7 @@ const upload = require("../middleware/upload");
 const { authenticate } = require("../middleware/authenticate");
 
 
-const { createArticle, getArticles, getArticleById, deleteArticle , updateArticle, likeArticle} = require("../controllers/articleController");
+const { createArticle, getArticles, getArticleById, deleteArticle , updateArticle, likeArticle, postComment} = require("../controllers/articleController");
 
 
 // router.get('/', (req, res) => {
@@ -21,7 +21,7 @@ router.get("/:id", getArticleById);
 router.delete("/:id", authenticate, deleteArticle);
 router.patch("/:id", authenticate, updateArticle);
 router.post("/:id/like",authenticate, likeArticle);
-// router.get("/my-articles", authenticate, getMyArticles);
+router.post("/:id/comments", authenticate, postComment);
 
 
 
