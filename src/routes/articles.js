@@ -8,14 +8,17 @@ const upload = require("../middleware/upload");
 const { authenticate } = require("../middleware/authenticate");
 
 
-const { createArticle } = require("../controllers/articleController");
+const { createArticle, getArticles, getArticleById } = require("../controllers/articleController");
 
 
-router.get('/', (req, res) => {
-  res.send('Server is running');
-});
+// router.get('/', (req, res) => {
+//   res.send('Server is running');
+// });
 
 router.post("/", authenticate, upload, createArticle);
+router.get("/", getArticles);
+router.get("/:id", getArticleById);
+
 
 
 
