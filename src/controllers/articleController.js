@@ -659,8 +659,94 @@ async function likeReply(req, res) {
     }
 }
 
+//  Edit a comment or reply
+async function editCommentOrReply(req, res) {
+    const user = req.user;
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+    const { articleId, commentId, replyId } = req.params;
+    const isReply = Boolean(replyId);
+
+    const { text } = req.body;
+    if (!text || text.trim() === "") {
+        return res.status(400).json({ message: "Text cannot be empty." });
+    }
+
+    try {
+        // Fetch article
+        const articleResult = await pool.query(
+            "SELECT * FROM articles WHERE id = $1",
+            [articleId]
+        );
+        const article = articleResult.rows[0];
+
+        if (!article) {
+            return res.status(404).json({ message: "Article not found" });
+        }
+
+        const comments = article.comments || [];
+        const commentIndex = comments.findIndex(c => c.id === Number(commentId));
+
+        if (commentIndex === -1) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        // If editing a reply
+        if (isReply) {
+            const replies = comments[commentIndex].replies || [];
+            const replyIndex = replies.findIndex(r => r.id === Number(replyId));
+
+            if (replyIndex === -1) {
+                return res.status(404).json({ message: "Reply not found" });
+            }
+
+            // Only article owner can edit reply
+            if (article.author !== user.username) {
+                return res.status(403).json({ message: "You are not allowed to edit this reply" });
+            }
+
+            replies[replyIndex].text = text;
+            replies[replyIndex].updatedAt = new Date().toISOString();
+
+            comments[commentIndex].replies = replies;
+
+            await pool.query(
+                "UPDATE articles SET comments = $1 WHERE id = $2",
+                [JSON.stringify(comments), articleId]
+            );
+
+            return res.status(200).json({
+                message: "Reply updated!",
+                reply: replies[replyIndex]
+            });
+        }
+
+        // Editing a comment
+        if (article.author !== user.username) {
+            return res.status(403).json({ message: "You are not allowed to edit this comment" });
+        }
+
+        comments[commentIndex].text = text;
+        comments[commentIndex].updatedAt = new Date().toISOString();
+
+        await pool.query(
+            "UPDATE articles SET comments = $1 WHERE id = $2",
+            [JSON.stringify(comments), articleId]
+        );
+
+        return res.status(200).json({
+            message: "Comment updated!",
+            comment: comments[commentIndex]
+        });
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: "Server error" });
+    }
+}
+
 
 module.exports = {
     createArticle, getArticles, getArticleById
-    , deleteArticle, updateArticle, likeArticle, postComment, getComments, replyComment, likeComment ,likeReply 
+    , deleteArticle, updateArticle, likeArticle, postComment, getComments, replyComment, likeComment ,likeReply , editCommentOrReply
 }
