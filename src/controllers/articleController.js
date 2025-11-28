@@ -810,8 +810,75 @@ async function deleteCommentOrReply(req, res) {
     }
 }
 
+//  Get articles created by the logged-in user
+async function getMyArticles(req, res) {
+    //  Authentication Check 
+    const user = req.user; 
+    
+    if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+    
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.max(1, parseInt(req.query.limit) || 10);
+
+      
+        const filters = req.query; 
+        const values = [user.username];
+        let filterQuery = "WHERE author = $1";
+
+        for (const key in filters) {
+            
+            if (key === "page" || key === "limit") continue; 
+            
+            const value = filters[key].toLowerCase();
+            
+            if (key === "category" && allowedCategories.map(c => c.toLowerCase()).includes(value)) {
+                values.push(value);
+                filterQuery += ` AND LOWER(category) = $${values.length}`;
+            } else if (key === "status" && allowedStatuses.map(s => s.toLowerCase()).includes(value)) {
+                values.push(value);
+                filterQuery += ` AND LOWER(status) = $${values.length}`;
+            } else if (key === "tags" && allowedTags.map(t => t.toLowerCase()).includes(value)) {
+                values.push(`%${value}%`);
+                filterQuery += ` AND tags::text ILIKE $${values.length}`;
+            } else if (key === "search") {
+                values.push(`%${value}%`, `%${value}%`);
+                filterQuery += ` AND (LOWER(title) ILIKE $${values.length - 1} OR LOWER(content) ILIKE $${values.length})`;
+            }
+        }
+
+        // Count total articles
+        const totalResult = await pool.query(`SELECT COUNT(*) FROM articles ${filterQuery}`, values);
+        const totalData = parseInt(totalResult.rows[0].count);
+        const totalPages = totalData === 0 ? 0 : Math.ceil(totalData / limit);
+
+        // Pagination
+        const offset = (page - 1) * limit;
+        const articlesResult = await pool.query(
+            `SELECT * FROM articles ${filterQuery} ORDER BY created_at DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+            [...values, limit, offset]
+        );
+
+        // 4. Express Response
+        return res.status(200).json({
+            totalData,
+            totalPages,
+            currentPage: page,
+            limit,
+            data: articlesResult.rows
+        });
+        
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+}
+
 
 module.exports = {
     createArticle, getArticles, getArticleById
-    , deleteArticle, updateArticle, likeArticle, postComment, getComments, replyComment, likeComment ,likeReply , editCommentOrReply, deleteCommentOrReply
+    , deleteArticle, updateArticle, likeArticle, postComment, getComments, replyComment, likeComment ,likeReply , editCommentOrReply, deleteCommentOrReply, getMyArticles
 }
