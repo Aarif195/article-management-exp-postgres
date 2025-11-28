@@ -21,6 +21,8 @@ router.get("/:id", getArticleById);
 router.delete("/:id", authenticate, deleteArticle);
 router.patch("/:id", authenticate, updateArticle);
 router.post("/:id/like",authenticate, likeArticle);
+// router.get("/my-articles", authenticate, getMyArticles);
+
 
 
 
