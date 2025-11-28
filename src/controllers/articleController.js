@@ -212,8 +212,103 @@ async function deleteArticle(req, res) {
     }
 }
 
+// UPDATE ARTICLE
+async function updateArticle(req, res) {
+    const user = req.user;
+    if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const id = parseInt(req.params.id);
+    const updatedData = req.body;
+
+    // VALIDATION
+    if (updatedData.title !== undefined) {
+        if (!updatedData.title.trim()) {
+            return res.status(400).json({ error: "Title cannot be empty." });
+        }
+    }
+
+    if (updatedData.content !== undefined) {
+        if (!updatedData.content.trim()) {
+            return res.status(400).json({ error: "Content cannot be empty." });
+        }
+    }
+
+    if (updatedData.category !== undefined) {
+        if (!updatedData.category.trim()) {
+            return res.status(400).json({ error: "Category cannot be empty." });
+        }
+        if (!allowedCategories.includes(updatedData.category)) {
+            return res.status(400).json({ error: "Invalid category." });
+        }
+    }
+
+    if (updatedData.status !== undefined) {
+        if (!updatedData.status.trim()) {
+            return res.status(400).json({ error: "Status cannot be empty." });
+        }
+        if (!allowedStatuses.includes(updatedData.status)) {
+            return res.status(400).json({ error: "Invalid status." });
+        }
+    }
+
+    if (updatedData.tags !== undefined) {
+        if (!Array.isArray(updatedData.tags) || updatedData.tags.length === 0) {
+            return res.status(400).json({ error: "Tags must be a non-empty array." });
+        }
+        if (!updatedData.tags.every(t => allowedTags.includes(t))) {
+            return res.status(400).json({ error: "Invalid tag(s)." });
+        }
+    }
+
+    try {
+        // Check existence + ownership
+        const check = await pool.query("SELECT * FROM articles WHERE id = $1", [id]);
+        const article = check.rows[0];
+
+        if (!article) {
+            return res.status(404).json({ message: "Article not found" });
+        }
+
+        if (article.author !== user.username) {
+            return res.status(403).json({ message: "Forbidden: You can only update your own articles" });
+        }
+
+        // Build dynamic SQL
+        const fields = [];
+        const values = [];
+        let i = 1;
+
+        for (const key in updatedData) {
+            fields.push(`${key} = $${i}`);
+            values.push(updatedData[key]);
+            i++;
+        }
+
+        values.push(id);
+
+        const updateSql = `
+            UPDATE articles
+            SET ${fields.join(", ")}, updated_at = NOW()
+            WHERE id = $${i}
+            RETURNING *
+        `;
+
+        const result = await pool.query(updateSql, values);
+
+        return res.status(200).json({
+            message: "Update successfully",
+            article: result.rows[0]
+        });
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+}
 
 
 module.exports = { createArticle, getArticles, getArticleById
-,deleteArticle
+,deleteArticle, updateArticle
 }
