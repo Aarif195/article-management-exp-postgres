@@ -474,7 +474,72 @@ async function postComment(req, res) {
 }
 
 
+// reply comment
+async function replyComment(req, res) {
+    const user = req.user;
+    if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const articleId = parseInt(req.params.articleId, 10);
+    const commentId = parseInt(req.params.commentId, 10);
+    const { text } = req.body;
+
+    if (!text || text.trim() === "") {
+        return res.status(400).json({ message: "Reply text is required" });
+    }
+
+    try {
+        // Fetch article from Postgres
+        const articleResult = await pool.query(
+            "SELECT * FROM articles WHERE id = $1",
+            [articleId]
+        );
+        const article = articleResult.rows[0];
+
+        if (!article) {
+            return res.status(404).json({ message: "Article not found" });
+        }
+
+        // STRICT PRIVATE: only article owner can act
+        if (article.author !== user.username) {
+            return res.status(403).json({
+                message: "Forbidden: Only the article owner can perform this action"
+            });
+        }
+
+        const comments = article.comments || [];
+        const commentIndex = comments.findIndex(c => c.id === commentId);
+
+        if (commentIndex === -1) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        const reply = {
+            id: Date.now(),
+            user: user.username,
+            text,
+            date: new Date().toISOString()
+        };
+
+        comments[commentIndex].replies = comments[commentIndex].replies || [];
+        comments[commentIndex].replies.push(reply);
+
+        // Update article in Postgres
+        await pool.query(
+            "UPDATE articles SET comments = $1 WHERE id = $2",
+            [JSON.stringify(comments), articleId]
+        );
+
+        return res.status(201).json(reply);
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: "Server error" });
+    }
+}
+
+
 module.exports = {
     createArticle, getArticles, getArticleById
-    , deleteArticle, updateArticle, likeArticle, postComment, getComments
+    , deleteArticle, updateArticle, likeArticle, postComment, getComments, replyComment
 }
