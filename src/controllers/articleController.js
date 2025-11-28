@@ -745,8 +745,73 @@ async function editCommentOrReply(req, res) {
     }
 }
 
+// DELETE comment or reply
+async function deleteCommentOrReply(req, res) {
+    try {
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        const articleId = parseInt(req.params.articleId, 10);
+        const commentId = parseInt(req.params.commentId, 10);
+        const replyId = req.params.replyId ? parseInt(req.params.replyId, 10) : null;
+
+        // Fetch article
+        const articleResult = await pool.query(
+            `SELECT * FROM articles WHERE id = $1`,
+            [articleId]
+        );
+        const article = articleResult.rows[0];
+
+        if (!article) {
+            return res.status(404).json({ message: "Article not found" });
+        }
+
+        //  PRIVATE CHECK: only article owner can delete
+        if (article.author !== user.username) {
+            return res.status(403).json({
+                message: replyId
+                    ? "You are not allowed to delete this reply"
+                    : "You are not allowed to delete this comment"
+            });
+        }
+
+        const comments = article.comments || [];
+        const commentIndex = comments.findIndex(c => c.id === commentId);
+
+        if (commentIndex === -1) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        if (replyId) {
+            const replies = comments[commentIndex].replies || [];
+            const replyIndex = replies.findIndex(r => r.id === replyId);
+
+            if (replyIndex === -1) {
+                return res.status(404).json({ message: "Reply not found" });
+            }
+
+            replies.splice(replyIndex, 1);
+            comments[commentIndex].replies = replies;
+        } else {
+            comments.splice(commentIndex, 1);
+        }
+
+        await pool.query(
+            `UPDATE articles SET comments = $1 WHERE id = $2`,
+            [JSON.stringify(comments), articleId]
+        );
+
+        return res.status(204).end();
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: "Server error" });
+    }
+}
+
 
 module.exports = {
     createArticle, getArticles, getArticleById
-    , deleteArticle, updateArticle, likeArticle, postComment, getComments, replyComment, likeComment ,likeReply , editCommentOrReply
+    , deleteArticle, updateArticle, likeArticle, postComment, getComments, replyComment, likeComment ,likeReply , editCommentOrReply, deleteCommentOrReply
 }

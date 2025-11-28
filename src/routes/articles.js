@@ -8,7 +8,7 @@ const upload = require("../middleware/upload");
 const { authenticate } = require("../middleware/authenticate");
 
 
-const { createArticle, getArticles, getArticleById, deleteArticle , updateArticle, likeArticle, postComment, getComments, replyComment, likeComment, likeReply, editCommentOrReply} = require("../controllers/articleController");
+const { createArticle, getArticles, getArticleById, deleteArticle , updateArticle, likeArticle, postComment, getComments, replyComment, likeComment, likeReply, editCommentOrReply, deleteCommentOrReply} = require("../controllers/articleController");
 
 
 
@@ -23,11 +23,12 @@ router.get("/:id/comments", authenticate, getComments);
 router.post("/:articleId/comments/:commentId/reply", authenticate, replyComment);
 router.post("/:articleId/comments/:commentId/like", authenticate, likeComment);
 router.post("/:articleId/comments/:commentId/replies/:replyId/like", authenticate, likeReply);
-
 router.put("/:articleId/comments/:commentId", authenticate, editCommentOrReply);
-
 router.put("/:articleId/comments/:commentId/replies/:replyId", authenticate, editCommentOrReply);
 
+router.delete("/:articleId/comments/:commentId", authenticate, deleteCommentOrReply);
+
+router.delete("/:articleId/comments/:commentId/replies/:replyId", authenticate, deleteCommentOrReply);
 
 
 
