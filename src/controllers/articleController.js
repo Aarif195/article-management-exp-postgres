@@ -1,4 +1,4 @@
-const multer  = require('multer')
+const multer = require('multer')
 const path = require("path");
 const { pool } = require("../config/db"); //  PostgreSQL pool 
 
@@ -308,7 +308,73 @@ async function updateArticle(req, res) {
     }
 }
 
+// LIKE ARTICLE ID
+async function likeArticle(req, res) {
+    const user = req.user;
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
 
-module.exports = { createArticle, getArticles, getArticleById
-,deleteArticle, updateArticle
+    const id = parseInt(req.params.id, 10);
+
+    try {
+        const q = await pool.query("SELECT * FROM articles WHERE id = $1", [id]);
+        const article = q.rows[0];
+
+        if (!article) {
+            return res.status(404).json({ message: "Article not found" });
+        }
+
+        if (String(article.author) !== String(user.username)) {
+            return res.status(403).json({ message: "You are not allowed to like this article" });
+        }
+
+        const hasLikedColumn = Object.prototype.hasOwnProperty.call(article, "liked");
+        const currentLiked = hasLikedColumn ? Boolean(article.liked) : false;
+
+        let newLikes = Number(article.likes || 0);
+        let newLiked = currentLiked;
+        let message;
+
+        if (currentLiked) {
+            newLikes = Math.max(newLikes - 1, 0);
+            newLiked = false;
+            message = "Article unliked!";
+        } else {
+            newLikes = newLikes + 1;
+            newLiked = true;
+            message = "Article liked!";
+        }
+
+        let updated;
+        if (hasLikedColumn) {
+            updated = await pool.query(
+                "UPDATE articles SET likes = $1, liked = $2, updated_at = NOW() WHERE id = $3 RETURNING *",
+                [newLikes, newLiked, id]
+            );
+        } else {
+            updated = await pool.query(
+                "UPDATE articles SET likes = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
+                [newLikes, id]
+            );
+        }
+
+        console.log({
+            tokenUser: user.username,
+            articleAuthor: article.author,
+            articleLikes: article.likes,
+            articleLiked: article.liked
+        });
+
+        return res.status(200).json({ message, article: updated.rows[0] });
+
+    } catch (err) {
+        console.error("likeArticle error:", err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+}
+
+
+
+module.exports = {
+    createArticle, getArticles, getArticleById
+    , deleteArticle, updateArticle, likeArticle
 }
