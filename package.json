@@ -6,10 +6,23 @@
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "Node.js",
+    "Express",
+    "PostgreSQL",
+    "REST API",
+    "articles",
+    "comments",
+    "replies",
+    "likes",
+    "user authentication",
+    "CRUD",
+    "backend",
+    "private access control"
+  ],
+  "author": "Aarif",
   "license": "ISC",
-  "description": "",
+  "description": "A Node.js + Express backend for managing articles with user authentication, comments, replies, likes, and strict author-based access control, using PostgreSQL for data storage.",
   "dependencies": {
     "bcrypt": "^6.0.0",
     "dotenv": "^17.2.3",

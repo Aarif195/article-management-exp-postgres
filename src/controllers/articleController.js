@@ -83,6 +83,7 @@ async function createArticle(req, res) {
 
 // GET ALL ARTICLES
 async function getArticles(req, res) {
+    
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = Math.max(1, parseInt(req.query.limit) || 10);
@@ -431,9 +432,9 @@ async function postComment(req, res) {
 }
 
 // get comments
- async function getComments(req, res) {
+async function getComments(req, res) {
     try {
-        const user = req.user;  
+        const user = req.user;
         if (!user) {
             return res.status(401).json({ message: "Unauthorized" });
         }
@@ -813,28 +814,28 @@ async function deleteCommentOrReply(req, res) {
 //  Get articles created by the logged-in user
 async function getMyArticles(req, res) {
     //  Authentication Check 
-    const user = req.user; 
-    
+    const user = req.user;
+
     if (!user) {
         return res.status(401).json({ message: "Unauthorized" });
     }
 
     try {
-    
+
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = Math.max(1, parseInt(req.query.limit) || 10);
 
-      
-        const filters = req.query; 
+
+        const filters = req.query;
         const values = [user.username];
         let filterQuery = "WHERE author = $1";
 
         for (const key in filters) {
-            
-            if (key === "page" || key === "limit") continue; 
-            
+
+            if (key === "page" || key === "limit") continue;
+
             const value = filters[key].toLowerCase();
-            
+
             if (key === "category" && allowedCategories.map(c => c.toLowerCase()).includes(value)) {
                 values.push(value);
                 filterQuery += ` AND LOWER(category) = $${values.length}`;
@@ -870,7 +871,7 @@ async function getMyArticles(req, res) {
             limit,
             data: articlesResult.rows
         });
-        
+
     } catch (err) {
         console.error(err);
         return res.status(500).json({ error: "Internal server error" });
@@ -880,5 +881,5 @@ async function getMyArticles(req, res) {
 
 module.exports = {
     createArticle, getArticles, getArticleById
-    , deleteArticle, updateArticle, likeArticle, postComment, getComments, replyComment, likeComment ,likeReply , editCommentOrReply, deleteCommentOrReply, getMyArticles
+    , deleteArticle, updateArticle, likeArticle, postComment, getComments, replyComment, likeComment, likeReply, editCommentOrReply, deleteCommentOrReply, getMyArticles
 }

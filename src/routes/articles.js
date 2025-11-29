@@ -1,5 +1,3 @@
-
-
 const express = require("express");
 const router = express.Router();
 
@@ -8,7 +6,6 @@ const { authenticate } = require("../middleware/authenticate");
 
 
 const { createArticle, getArticles, getArticleById, deleteArticle , updateArticle, likeArticle, postComment, getComments, replyComment, likeComment, likeReply, editCommentOrReply, deleteCommentOrReply, getMyArticles} = require("../controllers/articleController");
-
 
 
 router.post("/", authenticate, upload, createArticle);
@@ -29,10 +26,6 @@ router.put("/:articleId/comments/:commentId/replies/:replyId", authenticate, edi
 router.delete("/:articleId/comments/:commentId", authenticate, deleteCommentOrReply);
 
 router.delete("/:articleId/comments/:commentId/replies/:replyId", authenticate, deleteCommentOrReply);
-
-
-
-
 
 
 
